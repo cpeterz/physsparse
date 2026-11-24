@@ -1,0 +1,50 @@
+name: Deploy project site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out the project package
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Extract the static site
+        shell: bash
+        run: |
+          archive="$(find . -maxdepth 1 -type f -name '*-Static-Site.zip' -print)"
+          test -f "$archive"
+          unzip -q "$archive" -d dist
+          test -s dist/index.html
+          test -s dist/index.css
+          test -s dist/index.js
+          test -s dist/media/preview.mp4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the static site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
